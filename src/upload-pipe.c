@@ -92,6 +92,7 @@ int upload_pipe_push(const char *vuser, const char *file)
     size_t sizeof_starter;
     size_t sizeof_vuser;
     size_t sizeof_file;
+    size_t sizeof_host;
     size_t sizeof_buf;
     char *buf;
     char *pnt;
@@ -113,7 +114,8 @@ int upload_pipe_push(const char *vuser, const char *file)
     sizeof_starter = (size_t) 1U;
     sizeof_vuser = strlen(vuser);
     sizeof_file = strlen(file) + (size_t) 1U;
-    sizeof_buf = sizeof_starter + sizeof_vuser + sizeof_file;
+    sizeof_host = strlen(host) + (size_t) 1U;
+    sizeof_buf = sizeof_starter + sizeof_vuser + sizeof_file + sizeof_host;
     if ((buf = malloc(sizeof_buf)) == NULL) {
         return -1;
     }
@@ -123,6 +125,8 @@ int upload_pipe_push(const char *vuser, const char *file)
     memcpy(pnt, vuser, sizeof_vuser);
     pnt += sizeof_vuser;
     memcpy(pnt, file, sizeof_file);
+    pnt += sizeof_file;
+    memcpy(pnt, host, sizeof_host);
     (void) safe_write(upload_pipe_fd, buf, sizeof_buf, -1);
     free(buf);
     lock.l_type = F_UNLCK;

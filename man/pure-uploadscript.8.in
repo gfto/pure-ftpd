@@ -49,6 +49,8 @@ The login of the owner.
 The group name the files belongs to.
 \fB\UPLOAD_VUSER\fR
 The full user name, or the virtual user name (127 chars max) .
+\fB\UPLOAD_HOST\fR
+The host from which the file was uploaded (511 chars max).
 .SH "FILES"
 .LP 
 \fI@LOCALSTATEDIR@/run/pure\-ftpd.upload.pipe\fP 

@@ -72,18 +72,22 @@ static int readchar(const int upload_file_fd)
 }
 
 static int readpipe(const int upload_file_fd,
-                    char ** const r_who, char ** const r_file)
+                    char ** const r_who, char ** const r_file, char ** const r_host)
 {
     static char who[MAX_USER_LENGTH + 1U];
     static char file[MAXPATHLEN + VHOST_PREFIX_MAX_LEN];
+    static char host[MAX_HOST_LENGTH + 1U];
     const char * const whoend = &who[sizeof who];
     const char * const fileend = &file[sizeof file];
+    const char * const hostend = &host[sizeof host];
     char *whopnt = who;    
     char *filepnt = file;
+    char *hostpnt = host;
     int c;
     
     *r_who = NULL;
     *r_file = NULL;
+    *r_host = NULL;
     do {
         c = readchar(upload_file_fd);
         if (c == EOF) {
@@ -113,8 +117,20 @@ static int readpipe(const int upload_file_fd,
         }
         filepnt++;
     }
+    while (hostpnt != hostend) {
+        c = readchar(upload_file_fd);
+        if (c == EOF || (c != 0 && ISCTRLCODE(c))) {
+            return -1;
+        }
+        *hostpnt = (char) c;
+        if (c == 0) {
+            break;
+        }
+        hostpnt++;
+    }
     *r_who = who;
     *r_file = file;
+    *r_host = host;
     
     return 0;
 }
@@ -351,7 +367,7 @@ static void newenv_str(const char * const var, const char * const str)
 }
 #endif
 
-static void fillenv(const char * const who, const struct stat * const st)
+static void fillenv(const char * const who, const struct stat * const st, const char * const host)
 {
 #ifdef HAVE_PUTENV    
     struct passwd *pwd;
@@ -372,13 +388,16 @@ static void fillenv(const char * const who, const struct stat * const st)
     if (who != NULL) {
         newenv_str("UPLOAD_VUSER", who);
     }
+    if (host != NULL) {
+        newenv_str("UPLOAD_HOST", host);
+    }
 #else
     (void) st;
 #endif
 }
 
 static int run(const char * const who, const char * const file, 
-               const int upload_pipe_fd)
+               const char * const host, const int upload_pipe_fd)
 {
     struct stat st;
     pid_t pid;
@@ -397,7 +416,7 @@ static int run(const char * const who, const char * const file,
         if (close(upload_pipe_fd) < 0 || closedesc_all(1) < 0) {
             _exit(EXIT_FAILURE);
         }
-        fillenv(who, &st);
+        fillenv(who, &st, host);
         execl(script, script, file, (char *) NULL);
         _exit(EXIT_FAILURE);
     } else if (pid != (pid_t) -1) {
@@ -445,6 +464,7 @@ int main(int argc, char *argv[])
     int upload_pipe_fd;
     char *who;
     char *file;
+    char *host;
     
 #ifdef HAVE_SETLOCALE
 # ifdef LC_MESSAGES
@@ -487,13 +507,13 @@ int main(int argc, char *argv[])
     signal(SIGCHLD, SIG_DFL);
 #endif
     for (;;) {
-        if (readpipe(upload_pipe_fd, &who, &file) != 0) {
+        if (readpipe(upload_pipe_fd, &who, &file, &host) != 0) {
             (void) sleep(1);
             continue;
         }        
         file = checkvirtual(file);
         if (file != NULL && who != NULL) {
-            run(who, file, upload_pipe_fd);
+            run(who, file, host, upload_pipe_fd);
         }
     }
     /* NOTREACHED */

@@ -530,6 +530,9 @@ Your platform has a very large MAXPATHLEN, we should not trust it.
 #ifndef MAX_USER_LENGTH
 # define MAX_USER_LENGTH 127U
 #endif
+#ifndef MAX_HOST_LENGTH
+# define MAX_HOST_LENGTH 511U
+#endif
 
 #ifdef LOG_FTP
 # define DEFAULT_FACILITY LOG_FTP
